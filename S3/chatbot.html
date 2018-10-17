@@ -1,0 +1,197 @@
+<html lang="en" >
+<head>
+<meta charset="utf-8" />
+<meta HTTP-EQUIV="pragma" CONTENT="no-cache">
+<meta HTTP-EQUIV="Cache-Control" CONTENT="no-cache, must-revalidate">
+<meta HTTP-EQUIV="expires" CONTENT="0">
+<meta name="apple-touch-fullscreen" content="yes" />
+<meta name="format-detection" content="telephone=no" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no" media="screen" />
+<title>chatbot</title>
+<link rel="stylesheet" href="css/chatbot.css" type="text/css" />
+</head>
+<body>
+<div class="speak_window">
+	<div class="speak_box">
+		<div class="answer">
+			<div class="heard_img left"><img src="images/bot.jpg"></div>
+			<div class="answer_text">
+				<p>Hey，I'm Nana. I'm very glad to assist you!</p>
+				<i></i>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="saying">
+	<img src="images/saying.gif"/>
+</div>
+<div class="chatbox-footer">
+	<div class="chatbox_btn left" onClick="to_say()"><img src="images/yy_btn.png"></div>
+	<div class="chatbox_text left">
+	    <div class="write_box">
+	        <input type="text" class="left" onKeyUp="keyup()" placeholder="typing..." onkeypress="enterDown();"/>
+	    </div>   
+	    <div class="circle-button" id="chatbox">
+	        Hold to talk(Unavailable Now)
+	    </div>
+	</div>
+	<div class="chatbox_send right">
+	    <button onClick="up_say()" class="right">Send</button>
+	</div>
+	<div style="opacity:0;" class="clear"></div>
+</div>
+<script type="text/javascript" src="lib/js/jquery-1.11.1.min.js"></script>
+<script type="text/javascript" src="lib/axios/dist/axios.standalone.js"></script>
+<script type="text/javascript" src="lib/CryptoJS/rollups/hmac-sha256.js"></script>
+<script type="text/javascript" src="lib/CryptoJS/rollups/sha256.js"></script>
+<script type="text/javascript" src="lib/CryptoJS/components/hmac.js"></script>
+<script type="text/javascript" src="lib/CryptoJS/components/enc-base64.js"></script>
+<script type="text/javascript" src="lib/url-template/url-template.js"></script>
+<script type="text/javascript" src="lib/apiGatewayCore/sigV4Client.js"></script>
+<script type="text/javascript" src="lib/apiGatewayCore/apiGatewayClient.js"></script>
+<script type="text/javascript" src="lib/apiGatewayCore/simpleHttpClient.js"></script>
+<script type="text/javascript" src="lib/apiGatewayCore/utils.js"></script>
+<script type="text/javascript" src="apigClient.js"></script>
+<script type="text/javascript">
+	var apigClient = apigClientFactory.newClient();
+	function enterDown()
+	{
+	    if(event.keyCode==13){
+	     	up_say();
+	    }   
+	}
+
+	function to_write(){
+	    $('.chatbox_btn img').attr('src','images/yy_btn.png');
+	    $('.chatbox_btn').attr('onclick','to_say()');
+	    $('.write_box,.chatbox_send button').show();
+	    $('.circle-button,.chatbox_send a').hide();
+	    $('.write_box input').focus();
+	    for_bottom();
+	}
+
+	function to_say(){
+		$('.write_list').remove();
+	    $('.chatbox_btn img').attr('src','images/jp_btn.png');
+	    $('.chatbox_btn').attr('onclick','to_write()');
+	    $('.write_box,.chatbox_send button').hide();
+	    $('.circle-button,.chatbox_send a').show();
+	}
+
+	function up_say(){
+		$('.write_list').remove();
+	    var text = $('.write_box input').val(),
+	        str  = '<div class="question">';
+	        str += '<div class="heard_img right"><img src="images/user.png"/></div>';
+	        str += '<div class="question_text clear"><p>'+text+'</p><i></i>';
+	        str += '</div></div>';
+	        
+	    if(text == ''){
+	        alert('Please input content!');
+	        $('.write_box input').focus();
+	    }else{
+	    	var myDate = new Date();
+
+	        var params = {};
+	        var body = {
+			  "messages": [
+			    {
+			      "type": "request:SimpleMessage",
+			      "unstructured": {
+			        "id":"request"+myDate.getTime(),
+			        "text":text,
+			        "timestamp":"request"+myDate.toLocaleString()
+			      }
+			    }
+			  ]
+			};
+	        var additionalParams = {
+	        	"headers": {
+			        "x-api-key":"qSlC1E4LTt1sBhdnWXD8S4iIx4oo7HWV9GaOVn2v"
+			    }
+	        };
+	        var answer;
+
+	        apigClient.chatbotPost(params, body, additionalParams)
+    		.then(function(result){
+        		//This is where you would put a success callback
+        		var obj = result.data;
+        		//answer = JSON.stringify(obj);
+        		answer = obj.messages[0].unstructured.text;
+    		}).catch( function(result){
+        		//This is where you would put an error callback
+        		answer = JSON.stringify(result);
+        		answer = "Sorry, we can't handle your request because of the bad request";
+    		});
+
+	        $('.speak_box').append(str);
+	        $('.write_box input').val('');
+	        $('.write_box input').focus();
+	        autoWidth();
+	        for_bottom();
+	        setTimeout(function(){
+	            var ans  = '<div class="answer"><div class="heard_img left"><img src="images/bot.jpg"/></div>';
+	            	ans += '<div class="answer_text"><p>'+answer+'</p><i></i>';
+	        		ans += '</div></div>';
+	        	$('.speak_box').append(ans);
+				for_bottom();
+	        },1000);
+	    }
+	}
+
+	function keyup(){
+		var footer_height = $('.chatbox-footer').outerHeight(),
+			text = $('.write_box input').val(),
+			str = '<div class="write_list">'+text+'</div>';
+		if (text == '' || text == undefined){
+			$('.write_list').remove();
+		}else{
+			$('.chatbox-footer').append(str);
+			$('.write_list').css('bottom',footer_height);
+		}
+	}
+
+	var chatbox  = document.getElementById('chatbox');
+	function _touch_start(event){
+        event.preventDefault();
+        $('.chatbox_text').css('background','#c1c1c1');
+        $('.chatbox_text span').css('color','#fff');
+        $('.saying').show();
+    }
+
+    function _touch_end(event){
+        event.preventDefault();
+        $('.chatbox_text').css('background','#fff');
+        $('.chatbox_text .circle-button').css('color','#666');    
+        $('.saying').hide();
+        var str  = '<div class="question">';
+	        str += '<div class="heard_img right"><img src="images/user.png"/></div>';
+	        str += '<div class="question_text clear"><p>Sorry, voice recognition is unavailable</p><i></i>';
+	        str += '</div></div>';
+		$('.speak_box').append(str);
+		for_bottom();
+        setTimeout(function(){
+        	var ans  = '<div class="answer"><div class="heard_img left"><img src="images/bot.jpg"/></div>';
+	        	ans += '<div class="answer_text"><p>I have no idea about your words</p><i></i>';
+	    		ans += '</div></div>';
+	    	$('.speak_box').append(ans);
+			for_bottom();
+        },1000);       
+    }
+
+    chatbox.addEventListener("touchstart", _touch_start, false);
+    chatbox.addEventListener("touchend", _touch_end, false);
+
+    function for_bottom(){
+		var speak_height = $('.speak_box').height();
+		$('.speak_box,.speak_window').animate({scrollTop:speak_height},500);
+	}
+	
+	function autoWidth(){
+		$('.question_text').css('max-width',$('.question').width()-60);
+	}
+	autoWidth();
+</script>
+</body>
+</html>
